@@ -1,4 +1,4 @@
-k# This workflow will build a Java project with Maven, and cache/restore any dependencies to improve execution time
+# This workflow will build a Java project with Maven, and cache/restore any dependencies to improve execution time
 # For more info see: https://docs.github.com/en/actions/use-cases-and-examples/building-and-testing/building-and-testing-java-with-maven
 
 name: Java CI/CD Pipeline with Maven
