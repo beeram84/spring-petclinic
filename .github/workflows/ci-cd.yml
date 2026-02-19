@@ -71,7 +71,7 @@ jobs:
         run: scp -o StrictHostKeyChecking=no target/spring-petclinic-*.jar ec2-user@${{ secrets.EC2_HOST }}:/home/ubuntu/
 
       - name: Ensure Java is installed on remote
-        run: ssh -o StrictHostKeyChecking=no ec2-user@${{ secrets.EC2_HOST }} "sudo apt update && sudo apt install -y openjdk-21-jre"
+        run: ssh -o StrictHostKeyChecking=no ec2-user@${{ secrets.EC2_HOST }} "sudo yum install -y java-21-amazon-corretto"
 
       - name: Start Spring PetClinic
         run: ssh -o StrictHostKeyChecking=no ec2-user@${{ secrets.EC2_HOST }} "nohup java -jar /home/ubuntu/spring-petclinic-*.jar > /dev/null 2>&1 &"
