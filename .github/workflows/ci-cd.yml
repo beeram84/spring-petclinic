@@ -20,25 +20,26 @@ jobs:
         uses: actions/setup-java@v4
         with:
           java-version: ${{ matrix.java }}
-          distribution: 'temurin'
+          distribution: temurin
           cache: maven
 
       - name: Grant execute permission for Maven wrapper
         run: chmod +x mvnw
 
       - name: Build and test with Maven Wrapper
-        run: ./mvnw clean verify
+        run: ./mvnw -B clean verify
 
       - name: Build and analyze (SonarQube)
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
         run: |
-          ./mvnw -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
+          ./mvnw -B org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
             -Dsonar.projectKey=${{ github.repository }} \
             -Dsonar.projectName=${{ github.repository }} \
             -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }} \
-            -Dsonar.token=${{ secrets.SONAR_TOKEN }}
+            -Dsonar.token=${{ secrets.SONAR_TOKEN }} \
+            -Dsonar.java.binaries=target/classes
 
       - name: Archive production jar
         uses: actions/upload-artifact@v4
@@ -63,16 +64,14 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.EC2_PRIVATE_KEY }}
 
-      - name: Remove any existing app (Kill process on port 8080 on remote host)
+      - name: Remove any existing app (kill process on port 8080)
         run: ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} "fuser -k 8080/tcp || true"
 
       - name: Copy JAR to EC2
         run: scp -o StrictHostKeyChecking=no target/*.jar ubuntu@${{ secrets.EC2_HOST }}:/home/ubuntu/spring-petclinic.jar
 
       - name: Ensure Java is installed on remote
-        run: ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} \
-          "sudo apt update && sudo apt install -y openjdk-21-jre"
+        run: ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} "sudo apt update && sudo apt install -y openjdk-21-jre"
 
       - name: Start Spring PetClinic
-        run: ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} \
-          "nohup java -jar /home/ubuntu/spring-petclinic.jar > /dev/null 2>&1 &"
+        run: ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} "nohup java -jar /home/ubuntu/spring-petclinic.jar > /dev/null 2>&1 &"
