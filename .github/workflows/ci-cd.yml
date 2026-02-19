@@ -1,52 +1,3 @@
-name: Java CI/CD Pipeline with Maven
-
-on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        java: [ '21' ]
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up JDK ${{ matrix.java }}
-        uses: actions/setup-java@v4
-        with:
-          java-version: ${{ matrix.java }}
-          distribution: temurin
-          cache: maven
-
-      - name: Grant execute permission for Maven wrapper
-        run: chmod +x mvnw
-
-      - name: Build and test with Maven Wrapper
-        run: ./mvnw -B clean verify
-
-      - name: Build and analyze (SonarQube)
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-        run: |
-          ./mvnw -B org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
-            -Dsonar.projectKey=${{ github.repository }} \
-            -Dsonar.projectName=${{ github.repository }} \
-            -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }} \
-            -Dsonar.token=${{ secrets.SONAR_TOKEN }} \
-            -Dsonar.java.binaries=target/classes
-
-      - name: Archive production jar
-        uses: actions/upload-artifact@v4
-        with:
-          name: spring-petclinic-jar
-          path: target/*.jar
-
   deploy:
     runs-on: ubuntu-latest
     needs: [ build ]
@@ -65,13 +16,15 @@ jobs:
           ssh-private-key: ${{ secrets.EC2_PRIVATE_KEY }}
 
       - name: Remove any existing app (kill process on port 8080)
-        run: ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} "fuser -k 8080/tcp || true"
+        run: ssh -o StrictHostKeyChecking=no ec2-user@${{ secrets.EC2_HOST }} "fuser -k 8080/tcp || true"
 
       - name: Copy JAR to EC2
-        run: scp -o StrictHostKeyChecking=no target/*.jar ubuntu@${{ secrets.EC2_HOST }}:/home/ubuntu/spring-petclinic.jar
+        run: scp -o StrictHostKeyChecking=no target/*.jar ec2-user@${{ secrets.EC2_HOST }}:/home/ec2-user/spring-petclinic.jar
 
-      - name: Ensure Java is installed on remote
-        run: ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} "sudo apt update && sudo apt install -y openjdk-21-jre"
+      - name: Ensure Java is installed on remote (Amazon Linux)
+        run: ssh -o StrictHostKeyChecking=no ec2-user@${{ secrets.EC2_HOST }} \
+          "sudo yum install -y java-21-amazon-corretto-headless || sudo yum install -y java-17-amazon-corretto-headless"
 
       - name: Start Spring PetClinic
-        run: ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} "nohup java -jar /home/ubuntu/spring-petclinic.jar > /dev/null 2>&1 &"
+        run: ssh -o StrictHostKeyChecking=no ec2-user@${{ secrets.EC2_HOST }} \
+          "nohup java -jar /home/ec2-user/spring-petclinic.jar > /dev/null 2>&1 &"
