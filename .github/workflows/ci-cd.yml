@@ -65,13 +65,13 @@ jobs:
           ssh-private-key: ${{ secrets.EC2_PRIVATE_KEY }}
 
       - name: Remove any existing app (Kill process on port 8080 on remote host)
-        run: ssh -o StrictHostKeyChecking=no ec2-user@${{ secrets.EC2_HOST }} "fuser -k 8080/tcp || true"
+        run: ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} "fuser -k 8080/tcp || true"
 
       - name: Copy JAR to EC2
-        run: scp -o StrictHostKeyChecking=no target/spring-petclinic-*.jar ec2-user@${{ secrets.EC2_HOST }}:/home/ubuntu/
+        run: scp -o StrictHostKeyChecking=no target/spring-petclinic-*.jar ubuntu@${{ secrets.EC2_HOST }}:/home/ubuntu/
 
       - name: Ensure Java is installed on remote
-        run: ssh -o StrictHostKeyChecking=no ec2-user@${{ secrets.EC2_HOST }} "sudo yum install -y java-21-amazon-corretto"
+        run: ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }}  "sudo apt update && sudo apt install -y openjdk-21-jre"
 
       - name: Start Spring PetClinic
-        run: ssh -o StrictHostKeyChecking=no ec2-user@${{ secrets.EC2_HOST }} "nohup java -jar /home/ubuntu/spring-petclinic-*.jar > /dev/null 2>&1 &"
+        run: ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} "nohup java -jar /home/ubuntu/spring-petclinic-*.jar > /dev/null 2>&1 &"
